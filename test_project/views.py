@@ -2,7 +2,6 @@ from django.shortcuts import render
 import folium
 
 
-
 # Create your views here.
 
 def index(request):
@@ -14,3 +13,5 @@ def index(request):
 
     }
     return render(request,'index.html',context)
+
+
