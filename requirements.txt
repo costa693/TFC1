@@ -11,5 +11,5 @@ numpy
 azure-cognitiveservices-vision-computervision
 pillow
 requests
-# opencv-python
+opencv-python
 # yolo-realtime-congestion
