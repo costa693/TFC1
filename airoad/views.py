@@ -2,6 +2,7 @@ from django.shortcuts import render
 
 # Create your views here.
 from django.http import HttpResponse
+from django.conf import settings
 
 # import inference module
 from . import inference
@@ -18,6 +19,9 @@ import asyncio
 
 from django.http import JsonResponse
 from datetime import datetime
+
+# system
+import os
 
 # model
 from .models import AIRoadStatistics
@@ -39,7 +43,7 @@ def index(request):
 
 
 class VideoCamera(object):
-    def __init__(self, idRoad, video_file=None):
+    def __init__(self, idRoad, video_file=''):
 
         # id road
         self.idroad = idRoad
@@ -47,10 +51,12 @@ class VideoCamera(object):
         # ai response
         self.ai_stats = inference.DEFAULT_RESPONSE
 
-        if video_file == None:
-            self.video = cv2.VideoCapture(0)
-        else:
+        if os.path.isfile(video_file):
             self.video = cv2.VideoCapture(video_file)
+        else:
+            print(f"isfile : {video_file}")
+            self.video = cv2.VideoCapture(0)
+
 
         (self.grabbed, self.frame) = self.video.read()
 
@@ -79,18 +85,19 @@ class VideoCamera(object):
 
             # analyse image
             # asyncio.run(self.infere())
-    
+
     def save_data(self):
         while True:
             asyncio.run(self.infere())
-            
+
     @sync_to_async(thread_sensitive=True)
     def infere(self):
         # response = inference.analyze_octet_stream_image
 
         while True:
             # results = await sync_to_async(inference.analyze_octet_stream_image, thread_sensitive=True)(octet_stream_img=self.frame)
-            results = inference.analyze_octet_stream_image(octet_stream_img=self.get_frame())
+            results = inference.analyze_octet_stream_image(
+                octet_stream_img=self.get_frame())
 
             try:
                 # save results
@@ -119,8 +126,9 @@ def gen(camera):
 
 def traffic_stream_road_1(request):
     # global video_camera_objects
+    video_file = os.path.join(settings.STATIC_ROOT, "videoTrafic.mp4")
 
-    video_camera = VideoCamera(idRoad=1)
+    video_camera = VideoCamera(idRoad=1, video_file=video_file)
 
     # video_camera_objects['camera_road_1'] = video_camera
 
@@ -137,7 +145,22 @@ def cal_time(request):
 
 
 def road_statistiques(request, idroad):
-
     response = inference.DEFAULT_RESPONSE['statistics']
+
+    try:
+        latest_stats = AIRoadStatistics.objects.latest(
+            'name', 'nb_intake_dates')
+
+        response = {
+            'objects': latest_stats.nb_objects,
+            'car': latest_stats.nb_cars,
+            'person': latest_stats.nb_persons,
+            'motorcycle': latest_stats.nb_motorcycles,
+            'bicycle': latest_stats.nb_bicycles
+        }
+    except Exception as error:
+        # default response
+        response = inference.DEFAULT_RESPONSE['statistics']
+        print(f"Retrieve Error : {error}")
 
     return JsonResponse(response)
