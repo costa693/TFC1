@@ -21,7 +21,7 @@ L'app consiste à simuler un systeme de régulation routiere intelligence grace 
 * Charger la clé github dans l'agent ssh
 
 ```
--$ ssh-agent ~/.ssh/github
+-$ ssh-add ~/.ssh/github
 ```
 
 ## Travailler avec Git
