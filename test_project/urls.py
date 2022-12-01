@@ -19,9 +19,7 @@ from django.urls import path,include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('airoad/', include('airoad.urls')),
     # path('index/',views.index,name="index_geolocate"),
     # path('',views.index,name='index'),
-
-    
-
 ]

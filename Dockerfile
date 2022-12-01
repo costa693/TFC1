@@ -22,6 +22,11 @@ RUN apt-get install python3.9 -y \
     && apt install python3.10-venv -y \
     && apt-get install python3-pip -y
 
+# install opencv dependancies
+RUN apt-get update
+RUN apt-get install -y libsm6 libxext6 libxrender-dev
+RUN apt-get install -y python3-opencv
+
 # define the work directory
 WORKDIR /usr/src/app
 

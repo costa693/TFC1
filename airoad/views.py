@@ -1,0 +1,194 @@
+from django.shortcuts import render
+
+# Create your views here.
+from django.http import HttpResponse
+from django.conf import settings
+
+# import inference module
+from . import inference
+
+# for stream
+from django.views.decorators import gzip
+from django.http import StreamingHttpResponse
+import cv2
+
+# async
+import threading
+from asgiref.sync import sync_to_async
+import asyncio
+
+from django.http import JsonResponse
+from datetime import datetime
+
+# system
+import os
+import time
+
+# model
+from .models import AIRoadStatistics
+
+video_camera_objects = {
+    "camera_road_1": None,
+    "camera_road_2": None,
+    "camera_road_3": None,
+    "camera_road_4": None,
+}
+
+
+@gzip.gzip_page
+def index(request):
+    context_data = {
+        "idroads": [1, 2],
+    }
+    return render(request, 'traffic.html', context=context_data)
+
+
+class VideoCamera(object):
+    def __init__(self, idRoad, video_file=''):
+
+        # id road
+        self.idroad = idRoad
+
+        # frame per second
+        self.fps = 0
+        self.rate = 0
+
+        # ai response
+        self.ai_stats = inference.DEFAULT_RESPONSE
+
+        if os.path.isfile(video_file):
+            self.video = cv2.VideoCapture(video_file)
+        else:
+            print(f"isfile : {video_file}")
+            self.video = cv2.VideoCapture(0)
+
+        
+        # compute frame per second
+        self.compute_fps()
+
+        (self.grabbed, self.frame) = self.video.read()
+
+        # get next frame thread
+        threading.Thread(target=self.update, args=()).start()
+        # threading.Thread(target=self.infere, args=()).start()
+
+        # inference thread
+        # threading.Thread(target=self.infere, args=(self,)).start()
+        threading.Thread(target=asyncio.run, args=(self.infere(),)).start()
+
+    def __del__(self):
+        self.video.release()
+    
+    def compute_fps(self):
+        # Find OpenCV version
+        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+    
+        # With webcam get(CV_CAP_PROP_FPS) does not work.
+        # Let's see for ourselves.
+    
+        if int(major_ver)  < 3 :
+            self.fps = self.video.get(cv2.cv.CV_CAP_PROP_FPS)
+            print("Frames per second using video.get(cv2.cv.CV_CAP_PROP_FPS): {0}".format(self.fps))
+        else :
+            self.fps = self.video.get(cv2.CAP_PROP_FPS)
+            print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(self.fps))
+        
+        self.rate = self.fps / (60 * (self.fps / 2))
+
+    def get_frame(self):
+        image = self.frame
+        _, jpeg = cv2.imencode('.jpg', image)
+
+        image_stream = jpeg.tobytes()
+
+        return image_stream
+
+    def update(self):
+        while True:
+            (self.grabbed, self.frame) = self.video.read()
+
+            # frame rate
+            time.sleep(self.rate)
+            
+
+            # analyse image
+            # asyncio.run(self.infere())
+
+    def save_data(self):
+        while True:
+            asyncio.run(self.infere())
+
+    @sync_to_async(thread_sensitive=True)
+    def infere(self):
+        # response = inference.analyze_octet_stream_image
+
+        while True:
+            # results = await sync_to_async(inference.analyze_octet_stream_image, thread_sensitive=True)(octet_stream_img=self.frame)
+            results = inference.analyze_octet_stream_image(
+                octet_stream_img=self.get_frame())
+
+            try:
+                # save results
+                statistics = results['statistics']
+            except Exception as error:
+                print(f"[Error] : {error}")
+            else:
+                AIRoadStatistics(
+                    name=self.idroad,
+                    nb_objects=statistics['objects'],
+                    nb_cars=statistics['car'],
+                    nb_persons=statistics['person'],
+                    nb_motorcycles=statistics['motorcycle'],
+                    nb_bicycles=statistics['bicycle'],
+
+                ).save()
+
+
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+
+def traffic_stream_road_1(request):
+    # global video_camera_objects
+    video_file = os.path.join(settings.STATIC_ROOT, "videoTrafic.mp4")
+
+    video_camera = VideoCamera(idRoad=1, video_file=video_file)
+
+    # video_camera_objects['camera_road_1'] = video_camera
+
+    return StreamingHttpResponse(gen(video_camera),
+                                 content_type='multipart/x-mixed-replace; boundary=frame')
+
+
+def cal_time(request):
+    # Time Calculations Performed Here
+    now = datetime.now()
+    time_dict = {'days': now.day, 'hours': now.hour,
+                 'minutes': now.minute, 'seconds': now.second}
+    return JsonResponse(time_dict)
+
+
+def road_statistiques(request, idroad):
+    response = inference.DEFAULT_RESPONSE['statistics']
+
+    try:
+        latest_stats = AIRoadStatistics.objects.latest(
+            'name', 'nb_intake_dates')
+
+        response = {
+            'objects': latest_stats.nb_objects,
+            'car': latest_stats.nb_cars,
+            'person': latest_stats.nb_persons,
+            'motorcycle': latest_stats.nb_motorcycles,
+            'bicycle': latest_stats.nb_bicycles
+        }
+    except Exception as error:
+        # default response
+        response = inference.DEFAULT_RESPONSE['statistics']
+        print(f"Retrieve Error : {error}")
+
+    return JsonResponse(response)

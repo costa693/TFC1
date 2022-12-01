@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}
+AI Road View
+{% endblock %}
+
+
+{% block content %}
+    
+
+    <div id="road">
+        <h2>Road #1</h2>
+
+        <div id="statistics">
+            <p id="road_1_objects"></p>
+            <p id="road_1_cars"></p>
+            <p id="road_1_persons"></p>
+            <p id="road_1_motorcycles"></p>
+            <p id="road_1_bicycles"></p>
+        </div>
+
+        <div id="road_stream">
+            <img src="{% url 'traffic_stream_road_1' %}">
+        </div>
+    </div>
+
+    <h5 id="h5_time">Time</h5>
+
+    
+    <script>
+                
+        function getUpdatedTime(){
+           $.ajax({url: "{% url 'cal_time' %}", success: function(result){
+               var content = "Days: "+result['days']+", Hours: "+result['hours']+", Minutes: "+result['minutes']+", Seconds: "+result['seconds'];
+               $("#h5_time").text(content);
+               setTimeout(function(){getUpdatedTime();}, 1000); // will call function to update time every 2 seconds
+           }});
+        } 
+
+        function getUpdatedStatistics(){
+            $.ajax({url: "{% url 'road_statistiques' 1 %}", success: function(result){
+
+                // objects statistics
+                var nb_objects = "Objects : "+result['objects'];
+                var nb_cars = "Cars : "+result['car'];
+                var nb_persons = "Persons : "+result['person'];
+                var nb_motorcycles = "Motorcycles : "+result['motorcycle'];
+                var nb_bicycles = "Bicycles : "+result['bicycle'];
+                
+                // references
+                $("#road_1_objects").text(nb_objects);
+                $("#road_1_cars").text(nb_cars);
+                $("#road_1_persons").text(nb_persons);
+                $("#road_1_motorcycles").text(nb_motorcycles);
+                $("#road_1_bicycles").text(nb_bicycles);
+
+                // will call function to update time every 2 seconds
+                setTimeout(function(){getUpdatedStatistics();}, 1000); 
+            }});
+        } 
+
+        // get ready
+        $(document).ready(function(){
+            getUpdatedTime();
+            getUpdatedStatistics();
+        });
+
+    </script>
+
+
+    
+    
+{% endblock %}
