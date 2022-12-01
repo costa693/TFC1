@@ -28,14 +28,14 @@ AI Road View
 
     
     <script>
-        {% comment %}         
+                
         function getUpdatedTime(){
            $.ajax({url: "{% url 'cal_time' %}", success: function(result){
                var content = "Days: "+result['days']+", Hours: "+result['hours']+", Minutes: "+result['minutes']+", Seconds: "+result['seconds'];
                $("#h5_time").text(content);
                setTimeout(function(){getUpdatedTime();}, 1000); // will call function to update time every 2 seconds
            }});
-        } {% endcomment %}
+        } 
 
         function getUpdatedStatistics(){
             $.ajax({url: "{% url 'road_statistiques' 1 %}", success: function(result){
@@ -61,7 +61,7 @@ AI Road View
 
         // get ready
         $(document).ready(function(){
-            // getUpdatedTime();
+            getUpdatedTime();
             getUpdatedStatistics();
         });
 

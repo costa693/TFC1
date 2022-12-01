@@ -22,6 +22,7 @@ from datetime import datetime
 
 # system
 import os
+import time
 
 # model
 from .models import AIRoadStatistics
@@ -48,6 +49,10 @@ class VideoCamera(object):
         # id road
         self.idroad = idRoad
 
+        # frame per second
+        self.fps = 0
+        self.rate = 0
+
         # ai response
         self.ai_stats = inference.DEFAULT_RESPONSE
 
@@ -57,6 +62,9 @@ class VideoCamera(object):
             print(f"isfile : {video_file}")
             self.video = cv2.VideoCapture(0)
 
+        
+        # compute frame per second
+        self.compute_fps()
 
         (self.grabbed, self.frame) = self.video.read()
 
@@ -70,6 +78,22 @@ class VideoCamera(object):
 
     def __del__(self):
         self.video.release()
+    
+    def compute_fps(self):
+        # Find OpenCV version
+        (major_ver, minor_ver, subminor_ver) = (cv2.__version__).split('.')
+    
+        # With webcam get(CV_CAP_PROP_FPS) does not work.
+        # Let's see for ourselves.
+    
+        if int(major_ver)  < 3 :
+            self.fps = self.video.get(cv2.cv.CV_CAP_PROP_FPS)
+            print("Frames per second using video.get(cv2.cv.CV_CAP_PROP_FPS): {0}".format(self.fps))
+        else :
+            self.fps = self.video.get(cv2.CAP_PROP_FPS)
+            print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(self.fps))
+        
+        self.rate = self.fps / (60 * (self.fps / 2))
 
     def get_frame(self):
         image = self.frame
@@ -82,6 +106,10 @@ class VideoCamera(object):
     def update(self):
         while True:
             (self.grabbed, self.frame) = self.video.read()
+
+            # frame rate
+            time.sleep(self.rate)
+            
 
             # analyse image
             # asyncio.run(self.infere())

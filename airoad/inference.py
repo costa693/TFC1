@@ -62,6 +62,12 @@ DEFAULT_RESPONSE = {
 }
 
 
+vehicule_objects = [
+    'Van',
+    'Land vehicle',
+    'taxi',
+]
+
 def compute_statistics(data):
     response = copy.deepcopy(data)
     # statistics
@@ -113,6 +119,9 @@ def analyze_octet_stream_image(octet_stream_img=None):
 
     for detected_object in http_response_json['objects']:
         object_tag = detected_object['object']
+        
+        object_tag = 'car' if object_tag in vehicule_objects else object_tag
+        
         if object_tag in response['objects'].keys():
             response['objects'][object_tag].append(
                 {
