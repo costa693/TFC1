@@ -9,9 +9,15 @@ AI Road View
     
 
     <div id="road">
+        {% comment %}
+                affichage du nom de la route.
+            {% endcomment %}
         <h2>Road #1</h2>
 
         <div id="statistics">
+            {% comment %}
+                affichage des 'statistics' en temps réel.
+            {% endcomment %}
             <p id="road_1_objects"></p>
             <p id="road_1_cars"></p>
             <p id="road_1_persons"></p>
@@ -20,16 +26,27 @@ AI Road View
         </div>
 
         <div id="road_stream">
+            {% comment %}
+                affichage du 'VideoCameraStream' du traffic en temps réel.
+            {% endcomment %}
             <img src="{% url 'traffic_stream_road_1' %}">
         </div>
     </div>
+
+
+    {% comment %}
+        affichage du 'timing' en temps réel.
+    {% endcomment %}
 
     <h5 id="h5_time">Time</h5>
 
     
     <script>
-                
+        
         function getUpdatedTime(){
+            /*
+                Cette fonction fait la mise à jour temps réel du timing sur la page
+            */
            $.ajax({url: "{% url 'cal_time' %}", success: function(result){
                var content = "Days: "+result['days']+", Hours: "+result['hours']+", Minutes: "+result['minutes']+", Seconds: "+result['seconds'];
                $("#h5_time").text(content);
@@ -38,30 +55,47 @@ AI Road View
         } 
 
         function getUpdatedStatistics(){
+
+            /*
+                Cette fonction fait la mise à jour temps réel du timing sur la page
+
+                C'est meme pour ça que AJAX est utilisé, pour repondre à une question:
+                comment mettre a jour (en temps réel) le contexte d'une page 
+                alors que le rendu se fait qu'une seule fois.
+            */
+
+            // on appelle la fonction 'road_statistiques' et on lui passe le parametre 'idroad' =1
+            // on recupere la reponse (objet json statistics) dans la variable 'result'
             $.ajax({url: "{% url 'road_statistiques' 1 %}", success: function(result){
 
-                // objects statistics
+                // les statistics
                 var nb_objects = "Objects : "+result['objects'];
                 var nb_cars = "Cars : "+result['car'];
                 var nb_persons = "Persons : "+result['person'];
                 var nb_motorcycles = "Motorcycles : "+result['motorcycle'];
                 var nb_bicycles = "Bicycles : "+result['bicycle'];
                 
-                // references
+                // on modifie les éléments html via les references
+                // pour afficher les données
+                // Cfr le code html au-dessus.
                 $("#road_1_objects").text(nb_objects);
                 $("#road_1_cars").text(nb_cars);
                 $("#road_1_persons").text(nb_persons);
                 $("#road_1_motorcycles").text(nb_motorcycles);
                 $("#road_1_bicycles").text(nb_bicycles);
 
-                // will call function to update time every 2 seconds
+                // appel la fonction pour mettre à jour les données toutes 
+                // les 1 secondes ou (1000 milliseconds)
                 setTimeout(function(){getUpdatedStatistics();}, 1000); 
             }});
         } 
 
-        // get ready
+        // Préparer l'execution des fonctions de mise à jour
         $(document).ready(function(){
+            // Mettre a jour les donnees temporelles
             getUpdatedTime();
+
+            // Mettre a jour les donnees road_statistiques
             getUpdatedStatistics();
         });
 
