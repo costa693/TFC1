@@ -8,7 +8,6 @@ L'app consiste à simuler un systeme de régulation routiere intelligence grace 
 * L'app doit aussi afficher en temps réel le flux vidéo ainsi que les objets detectés.
 * L'app doit simuler les états ROUGE JAUNE VERT en arretant/demarrant le flux vidéo (Pause, Unpause)
 
-
 ## Préparer le remote ssh to Github
 
 * Ouvrir le projet avec git bash
@@ -64,7 +63,6 @@ Toujours se rassurer que les modifications ne sont pas faites sur la branche pri
 
 ## Lancer le projet
 
-
 * Ouvrir le projet avec git bash (vscode)
 * Créer un environnement virtuel python
 
@@ -93,3 +91,29 @@ python -m venv venv
   ```
   -$ python manage.py runserver 8000
   ```
+
+## MES IDÉES
+
+L'app doit simuler les états ROUGE JAUNE VERT en arretant/demarrant le flux vidéo (Pause, Unpause)
+
+1. Simuler les les états ROUGE JAUNE VERT
+   Simplement avoir un objet ``FeuDeSignalisation`` pour chaque route, car dans la réalité, il y a toujours un feu pour une route précise.
+
+   Pour permettre un controle adequat du flux vidéo, un objet ``FeuDeSignalisation`` aura un attribut de type ``VideoCameraStreamDetection`` qui fera office de relation avec la classe de controle du flux vidéo.
+
+   Et aussi des methodes ``allumer_rouge(), allumer_jaune(), allumer_vert()`` pour allumer ou eteindre.
+
+   Allumer feu implique Eteindre les 2 autres.
+
+   La fonction ``allumer_rouge()`` doit faire une pause du flux vidéo en appellant ``VideoCameraStreamDetection.pause_stream`` (Cfr point 2)
+
+   La fonction ``allumer_jaune()`` ne change aucun état.
+
+   La fonction ``allumer_vert()`` doit faire un play (unpause) du flux vidéo en appellant ``VideoCameraStreamDetection.unpause_stream`` (Cfr point 2)
+2. en arretant/demarrant le flux vidéo (Pause, Unpause)
+
+   Ajouter une fonction ``pause_stream, resume_stream`` à la classe ``VideoCameraStreamDetection`` ce qui permettra d'arreter / demarrer le stream.
+
+   Ces fonctions doivent mettre en attente le ``thread : self.next_trame_thread`` dans l'objectif de mettre en pause le flux vidéo sur la vue, et aussi mettre en attente le ``tread : trame_inference_thread`` dans l'objectif de mettre en pause les inférences afin d'éviter que l'ia puisse analyser plusieurs fois la meme trame.
+
+   [Un exemple pause/unpause Thread](https://topic.alibabacloud.com/a/python-thread-pause-resume-exit-detail-and-example-_python_1_29_20095165.html)
