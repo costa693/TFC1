@@ -88,6 +88,9 @@ class VideoCameraStreamDetection(object):
         # une image dans le flux video
         self.frame = None
 
+        # image avec rectangle
+        self.frame_with_rect = None
+
         # indique si la lecture d'une frame reussi ou non
         self.grabbed = False
 
@@ -120,6 +123,9 @@ class VideoCameraStreamDetection(object):
         # en une suite d'image. Pour éviter de geler l'application
         self.next_trame_thread = threading.Thread(target=self.update, args=())
         self.next_trame_thread.start()  # on lance le thread
+
+        self.make_rectangle_thread = threading.Thread(target=self.make_rectangle, args=())
+        self.make_rectangle_thread.start()  # on lance le thread
 
         # Création d'un thread qui permet d'analyser
         # le contenu de self.frame. Pour eviter de geler l'application
@@ -163,6 +169,31 @@ class VideoCameraStreamDetection(object):
         # mettre à jour la vitesse de lecture de la video.
         # si on a 30 images par seconde, chaque image prend 1/30 secondes.
         self.rate = 1 / self.frame_per_second
+    
+    def make_rectangle(self):
+            """
+                Cette methode permet de tracer des rectangles autour des objets
+            """
+
+            while self.grabbed:
+                self.frame_with_rect = self.frame
+
+                for object_name, list_objets in self.ai_stats_last_frame['objects'].items():
+                    rgb_color = (255, 0, 0) # default car
+
+                    if object_name == "person":
+                        rgb_color = (0, 255, 0)
+                    
+                    elif object_name == "motorcycle":
+                        rgb_color = (0, 0, 255)
+                    
+                    elif object_name == "bicycle":
+                        rgb_color = (255, 0, 255)
+                    
+                    for loc_dic in list_objets:
+                        cv2.rectangle(self.frame_with_rect, (loc_dic['x'], loc_dic['y']), 
+                                (loc_dic['x'] + loc_dic['h'], loc_dic['y'] + loc_dic['w']), 
+                                rgb_color, 5)
 
     def get_frame(self):
         """
@@ -173,7 +204,8 @@ class VideoCameraStreamDetection(object):
         """
 
         # Recuperation de la derniere frame lue
-        image = self.frame
+        # image = make_rectangle(self.frame)
+        image = self.frame_with_rect
 
         # transformation de la frame en une image de type 'jpg'
         _, jpeg = cv2.imencode('.jpg', image)
@@ -267,6 +299,10 @@ class VideoCameraStreamDetection(object):
             try:
                 # Récuperation du sous dictionnaire 'statistics'
                 statistics = results['statistics']
+
+                # update statistics property
+                self.ai_stats_last_frame = results
+
             except Exception as error:
                 # s'il y a une erreur quelconque
                 # juste afficher un message d'erreur.
